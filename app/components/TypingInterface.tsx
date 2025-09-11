@@ -32,7 +32,6 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
   const [inputDisabled, setInputDisabled] = useState(true);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
-  // Convert time string (00:14.14) to seconds
   const timeToSeconds = (timeStr: string): number => {
     const [minutes, seconds] = timeStr.split(":");
     return parseInt(minutes) * 60 + parseFloat(seconds);

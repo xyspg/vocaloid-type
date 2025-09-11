@@ -1,26 +1,30 @@
 import React from "react";
 import Image from "next/image";
 import { Song } from "@/app/types";
-import Link from "next/link";
+import { motion } from "motion/react";
 
-const SongCover = ({ song }: { song: Song }) => {
+const SongCover = ({
+  song,
+  onClick,
+}: {
+  song: Song;
+  onClick?: (s: Song) => void;
+}) => {
   return (
-    <div>
-      <div className="relative w-full aspect-square shadow-2xl rounded-lg hover:scale-102 transition-all duration-200 hover:shadow-4xl cursor-pointer">
-        <Link href={`/play/${song.slug}`}>
+      <motion.div
+        layoutId={`album-${song.slug}`}
+        onClick={() => onClick?.(song)}
+        className="relative w-full aspect-square shadow-2xl rounded-lg overflow-hidden"
+        whileHover={ onClick ? { y: -4, scale: 1.02 } : undefined }
+        transition={{ type: "spring", stiffness: 150, damping: 20 }}
+      >
         <Image
           src={song.cover}
           alt={song.title}
           fill
           className="object-cover"
         />
-        </Link>
-      </div>
-      <div className="text-center mt-2">
-        <h2 className="text-lg font-bold">{song.title}</h2>
-        <p className="text-sm">{song.artist}</p>
-      </div>
-    </div>
+      </motion.div>
   );
 };
 

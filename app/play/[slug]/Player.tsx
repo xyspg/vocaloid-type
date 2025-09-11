@@ -1,14 +1,36 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Song } from "@/app/types";
 import TypingInterface from "@/app/components/TypingInterface";
 
 const Player = ({ song }: { song: Song }) => {
+  const searchParams = useSearchParams();
+  const level = searchParams.get("level") || "normal";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [score, setScore] = useState(0);
+
+  // Get playback speed based on level
+  const getPlaybackSpeed = (level: string): number => {
+    switch (level) {
+      case "BASIC": return 0.5;
+      case "ADVANCED": return 0.75;
+      case "EXPERT": return 1.0;
+      case "MASTER": return 1.25;
+      default: return 1.0;
+    }
+  };
+
+  // Set playback speed when level changes
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.playbackRate = getPlaybackSpeed(level);
+    }
+  }, [level]);
 
   // Track video time and playing state
   useEffect(() => {
@@ -21,17 +43,32 @@ const Player = ({ song }: { song: Song }) => {
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    
+    const handleLoadedMetadata = () => {
+      const targetSpeed = getPlaybackSpeed(level);
+      video.playbackRate = targetSpeed;
+      console.log(`Set playback rate to ${targetSpeed} for level ${level}`);
+    };
+
+    const handleCanPlay = () => {
+      const targetSpeed = getPlaybackSpeed(level);
+      video.playbackRate = targetSpeed;
+    };
 
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("canplay", handleCanPlay);
 
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("pause", handlePause);
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("canplay", handleCanPlay);
     };
-  }, []);
+  }, [level]);
 
   const handleUnmute = () => {
     const video = videoRef.current;
@@ -39,8 +76,23 @@ const Player = ({ song }: { song: Song }) => {
     video.muted = false;
     video.volume = 1;
     setIsMuted(false);
-    // Attempt to play in case it was paused by the browser
-    video.play().catch(() => {});
+    
+    // Set playback rate and play with error handling
+    const targetSpeed = getPlaybackSpeed(level);
+    video.playbackRate = targetSpeed;
+    
+    video.play().then(() => {
+      // Double-check playback rate after play starts
+      if (video.playbackRate !== targetSpeed) {
+        video.playbackRate = targetSpeed;
+      }
+    }).catch((error) => {
+      console.error('Play failed:', error);
+      // Try playing again after a short delay
+      setTimeout(() => {
+        video.play().catch(() => {});
+      }, 100);
+    });
   };
 
   const handleScoreUpdate = (newScore: number) => {
@@ -94,10 +146,15 @@ const Player = ({ song }: { song: Song }) => {
           </button>
         )}
 
-        {/* Score display */}
+        {/* Score and Level display */}
         {!isMuted && (
-          <div className="absolute top-6 right-6 bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg">
-            <div className="text-lg font-bold">{score}%</div>
+          <div className="absolute top-6 right-6 space-y-2">
+            <div className="bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg">
+              <div className="text-lg font-bold">{score}%</div>
+            </div>
+            <div className="bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg">
+              <div className="text-sm capitalize">{level} ({getPlaybackSpeed(level)}x)</div>
+            </div>
           </div>
         )}
       </div>
