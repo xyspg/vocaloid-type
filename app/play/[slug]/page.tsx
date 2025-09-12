@@ -3,7 +3,6 @@ import songs from "@/app/data/songs.json";
 import Player from "./Player";
 
 const Play = ({ params }: { params: { slug: string } }) => {
-  // Find the song by slug
   const song = songs.find((s) => s.slug === params.slug);
 
   if (!song) {

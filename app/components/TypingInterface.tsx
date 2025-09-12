@@ -1,5 +1,4 @@
 "use client";
-import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 interface LyricLine {
@@ -63,7 +62,6 @@ const TypingInterface = ({
   const [totalCharsInGame, setTotalCharsInGame] = useState(0);
   const [currentLineCorrectChars, setCurrentLineCorrectChars] = useState(0);
   const [processedLines, setProcessedLines] = useState<Set<number>>(new Set());
-  const [totalProcessedChars, setTotalProcessedChars] = useState(0);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   const timeToSeconds = (timeStr: string): number => {
@@ -331,7 +329,6 @@ const TypingInterface = ({
       totalCharsInGame,
       currentLineCorrectChars,
       processedLines,
-      totalProcessedChars,
       lyrics_romaji,
       onGameComplete,
     ]
