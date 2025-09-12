@@ -14,6 +14,7 @@ const SongCover = ({
       <motion.div
         layoutId={`album-${song.slug}`}
         onClick={() => onClick?.(song)}
+        data-umami-event={`song-${song.slug}`}
         className="relative w-full aspect-square shadow-2xl rounded-lg overflow-hidden"
         whileHover={ onClick ? { y: -4, scale: 1.02 } : undefined }
         transition={{ type: "spring", stiffness: 150, damping: 20 }}

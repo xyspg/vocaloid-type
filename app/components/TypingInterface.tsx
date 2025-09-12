@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 interface LyricLine {
@@ -90,17 +91,10 @@ const TypingInterface = ({
       ) {
         setCountdown(countdownValue);
       }
-      
-      // Enable input 1 second before first lyric starts
-      if (timeUntilFirstLyric <= 1) {
-        setInputDisabled(false);
-      } else {
-        setInputDisabled(true);
-      }
       return;
     }
 
-    // Hide countdown and ensure input is enabled when first lyric starts
+    // Hide countdown and enable input when first lyric starts
     if (showCountdown && currentTime >= firstLyricTime) {
       setShowCountdown(false);
       setInputDisabled(false);
@@ -350,8 +344,19 @@ const TypingInterface = ({
     const cleanedUpcomingRomanji = cleanRomanjiText(upcomingRomanji);
 
     return (
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-center max-w-4xl mx-auto px-8">
+      <div className="fixed inset-0 flex items-center justify-center">
+        {/* Invisible tap area for iOS focus */}
+        <div 
+          className="absolute inset-0 pointer-events-auto cursor-pointer"
+          onClick={() => {
+            if (hiddenInputRef.current) {
+              hiddenInputRef.current.focus();
+            }
+          }}
+          style={{ backgroundColor: 'transparent' }}
+        />
+        
+        <div className="text-center max-w-4xl mx-auto px-8 pointer-events-none">
           {/* Show upcoming lyrics */}
           <div className="text-4xl mb-6 font-bold leading-relaxed text-gray-500 drop-shadow-2xl">
             <span style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
@@ -359,7 +364,7 @@ const TypingInterface = ({
             </span>
           </div>
 
-          <div className="text-2xl mb-8 text-center font-mono leading-relaxed text-gray-500">
+          <div className="text-2xl mb-8 text-center font-mono leading-relaxed text-gray-500 flex flex-col justify-center items-center gap-2">
             <span style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
               {cleanedUpcomingRomanji}
             </span>
@@ -385,6 +390,21 @@ const TypingInterface = ({
             ))}
           </div>
         </div>
+        
+        {/* Hidden input field for capturing keystrokes - always enabled */}
+        <input
+          ref={hiddenInputRef}
+          type="text"
+          value=""
+          onChange={() => {}} // Ignore input during countdown
+          className="absolute -left-96 opacity-0 pointer-events-auto"
+          autoFocus
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck="false"
+          style={{ position: "fixed", left: "-9999px" }}
+        />
       </div>
     );
   }
@@ -425,37 +445,20 @@ const TypingInterface = ({
         </div>
       </div>
 
-      {/* Mobile-friendly input field */}
+      {/* Hidden input field for capturing keystrokes */}
       <input
         ref={hiddenInputRef}
         type="text"
         value={userInput}
         onChange={handleInputChange}
         disabled={inputDisabled}
-        className="fixed top-0 left-0 w-1 h-1 opacity-0 pointer-events-auto text-transparent bg-transparent border-none outline-none"
+        className="absolute -left-96 opacity-0 pointer-events-auto"
         autoFocus
         autoComplete="off"
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck="false"
-        inputMode="text"
-        style={{ 
-          position: "fixed", 
-          top: "0px", 
-          left: "0px",
-          width: "1px",
-          height: "1px",
-          fontSize: "16px", // Prevents zoom on iOS
-          zIndex: 9999
-        }}
-        onBlur={(e) => {
-          // Refocus immediately on mobile to keep keyboard open
-          setTimeout(() => {
-            if (!inputDisabled && hiddenInputRef.current) {
-              hiddenInputRef.current.focus();
-            }
-          }, 10);
-        }}
+        style={{ position: "fixed", left: "-9999px" }}
       />
     </div>
   );
