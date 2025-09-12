@@ -90,11 +90,17 @@ const TypingInterface = ({
       ) {
         setCountdown(countdownValue);
       }
-      setInputDisabled(true);
+      
+      // Enable input 1 second before first lyric starts
+      if (timeUntilFirstLyric <= 1) {
+        setInputDisabled(false);
+      } else {
+        setInputDisabled(true);
+      }
       return;
     }
 
-    // Hide countdown and enable input when first lyric starts
+    // Hide countdown and ensure input is enabled when first lyric starts
     if (showCountdown && currentTime >= firstLyricTime) {
       setShowCountdown(false);
       setInputDisabled(false);
@@ -419,16 +425,37 @@ const TypingInterface = ({
         </div>
       </div>
 
-      {/* Hidden input field for capturing keystrokes */}
+      {/* Mobile-friendly input field */}
       <input
         ref={hiddenInputRef}
         type="text"
         value={userInput}
         onChange={handleInputChange}
         disabled={inputDisabled}
-        className="absolute -left-96 opacity-0 pointer-events-auto"
+        className="fixed top-0 left-0 w-1 h-1 opacity-0 pointer-events-auto text-transparent bg-transparent border-none outline-none"
         autoFocus
-        style={{ position: "fixed", left: "-9999px" }}
+        autoComplete="off"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck="false"
+        inputMode="text"
+        style={{ 
+          position: "fixed", 
+          top: "0px", 
+          left: "0px",
+          width: "1px",
+          height: "1px",
+          fontSize: "16px", // Prevents zoom on iOS
+          zIndex: 9999
+        }}
+        onBlur={(e) => {
+          // Refocus immediately on mobile to keep keyboard open
+          setTimeout(() => {
+            if (!inputDisabled && hiddenInputRef.current) {
+              hiddenInputRef.current.focus();
+            }
+          }, 10);
+        }}
       />
     </div>
   );
