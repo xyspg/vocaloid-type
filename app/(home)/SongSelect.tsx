@@ -53,7 +53,7 @@ export default function SongSelect() {
               exit={{ opacity: 0, x: 50 }}
               transition={{ duration: 0.3, ease: "easeOut", delay: 0.1 }}
             >
-              <LevelSelect song={selected} />
+              <LevelSelect song={selected} onClose={() => setSelected(null)} />
             </motion.div>
           </>
         )}

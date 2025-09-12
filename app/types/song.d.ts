@@ -7,7 +7,7 @@ export interface Song {
     slug: string;
     title: string;
     artist: string;
-    bpm: number;
+    bpm?: number;
     cover: string;
     video: string;
     lyrics: LyricLine[];

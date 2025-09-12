@@ -19,8 +19,8 @@ const SongCover = ({
         transition={{ type: "spring", stiffness: 150, damping: 20 }}
       >
         <Image
-          src={song.cover}
-          alt={song.title}
+          src={`https://object.xyspg.moe/vocaloid/images/${song.cover}`}
+                    alt={song.title}
           fill
           className="object-cover"
         />

@@ -1,25 +1,37 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { Song } from "@/app/types";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Judge, Song } from "@/app/types";
 import TypingInterface from "@/app/components/TypingInterface";
+import ResultScreen from "@/app/components/ResultScreen";
 
 const Player = ({ song }: { song: Song }) => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const level = searchParams.get("level") || "normal";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [score, setScore] = useState(0);
+  const [grade, setGrade] = useState("D");
+  const [judgmentStats, setJudgmentStats] = useState({
+    criticalPerfect: 0,
+    perfect: 0,
+    great: 0,
+    good: 0,
+    miss: 0
+  });
+  const [showResults, setShowResults] = useState(false);
+  const [gameCompleted, setGameCompleted] = useState(false);
 
   // Get playback speed based on level
   const getPlaybackSpeed = (level: string): number => {
     switch (level) {
-      case "BASIC": return 0.5;
-      case "ADVANCED": return 0.75;
-      case "EXPERT": return 1.0;
-      case "MASTER": return 1.25;
+      case "0.5": return 0.5;
+      case "0.75": return 0.75;
+      case "1.0": return 1.0;
+      case "1.25": return 1.25;
       default: return 1.0;
     }
   };
@@ -55,11 +67,17 @@ const Player = ({ song }: { song: Song }) => {
       video.playbackRate = targetSpeed;
     };
 
+    const handleVideoEnd = () => {
+      // Video finished - trigger results screen
+      handleGameComplete();
+    };
+
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
     video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("ended", handleVideoEnd);
 
     return () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
@@ -67,6 +85,7 @@ const Player = ({ song }: { song: Song }) => {
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("ended", handleVideoEnd);
     };
   }, [level]);
 
@@ -95,9 +114,41 @@ const Player = ({ song }: { song: Song }) => {
     });
   };
 
-  const handleScoreUpdate = (newScore: number) => {
+  const handleScoreUpdate = (newScore: number, newGrade: string, newJudgmentStats: Judge) => {
     setScore(newScore);
+    setGrade(newGrade);
+    setJudgmentStats(newJudgmentStats);
   };
+
+  const handleGameComplete = () => {
+    setGameCompleted(true);
+    setTimeout(() => {
+      setShowResults(true);
+    }, 1000); // Delay to show final score briefly
+  };
+
+  const handlePlayAgain = () => {
+    window.location.reload(); // Simple way to restart the game
+  };
+
+  const handleBackToMenu = () => {
+    router.push('/'); // Navigate back to home
+  };
+
+  // Show results screen if game completed
+  if (showResults) {
+    return (
+      <ResultScreen
+        song={song}
+        score={score}
+        grade={grade}
+        judgmentStats={judgmentStats}
+        level={level}
+        onPlayAgain={handlePlayAgain}
+        onBackToMenu={handleBackToMenu}
+      />
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
@@ -109,7 +160,7 @@ const Player = ({ song }: { song: Song }) => {
         playsInline
         controls={false}
       >
-        <source src={song.video} type="video/mp4" />
+        <source src={`https://object.xyspg.moe/vocaloid/videos/${song.video}`} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
 
@@ -146,26 +197,26 @@ const Player = ({ song }: { song: Song }) => {
           </button>
         )}
 
-        {/* Score and Level display */}
-        {!isMuted && (
+        {/* Score and Grade display */}
+        {!isMuted && !gameCompleted && (
           <div className="absolute top-6 right-6 space-y-2">
             <div className="bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg">
-              <div className="text-lg font-bold">{score}%</div>
+              <div className="text-2xl font-bold text-center">{grade}</div>
+              <div className="text-sm text-center">{score.toFixed(4)}%</div>
             </div>
-            <div className="bg-black bg-opacity-60 text-white px-4 py-2 rounded-lg">
-              <div className="text-sm capitalize">{level} ({getPlaybackSpeed(level)}x)</div>
-            </div>
+        
           </div>
         )}
       </div>
 
       {/* Typing Interface */}
-      {!isMuted && (
+      {!isMuted && !gameCompleted && (
         <TypingInterface
           lyrics={song.lyrics}
           lyrics_romaji={song.lyrics_romaji}
           currentTime={currentTime}
           onScoreUpdate={handleScoreUpdate}
+          onGameComplete={handleGameComplete}
         />
       )}
     </div>

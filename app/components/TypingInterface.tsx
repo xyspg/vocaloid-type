@@ -10,7 +10,20 @@ interface TypingInterfaceProps {
   lyrics: LyricLine[];
   lyrics_romaji: LyricLine[];
   currentTime: number;
-  onScoreUpdate?: (score: number) => void;
+  onScoreUpdate?: (
+    score: number,
+    grade: string,
+    judgment: JudgmentStats
+  ) => void;
+  onGameComplete?: () => void;
+}
+
+interface JudgmentStats {
+  criticalPerfect: number;
+  perfect: number;
+  great: number;
+  good: number;
+  miss: number;
 }
 
 interface CharacterState {
@@ -20,16 +33,36 @@ interface CharacterState {
   typed: boolean;
 }
 
-const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: TypingInterfaceProps) => {
+const TypingInterface = ({
+  lyrics,
+  lyrics_romaji,
+  currentTime,
+  onScoreUpdate,
+  onGameComplete,
+}: TypingInterfaceProps) => {
   const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
   const [userInput, setUserInput] = useState("");
   const [japaneseText, setJapaneseText] = useState("");
   const [romanjiText, setRomanjiText] = useState("");
-  const [romanjiStates, setRomanjiStates] = useState<("pending" | "correct" | "incorrect")[]>([]);
+  const [romanjiStates, setRomanjiStates] = useState<
+    ("pending" | "correct" | "incorrect")[]
+  >([]);
   const [score, setScore] = useState(0);
   const [countdown, setCountdown] = useState(0);
   const [showCountdown, setShowCountdown] = useState(false);
   const [inputDisabled, setInputDisabled] = useState(true);
+  const [judgmentStats, setJudgmentStats] = useState<JudgmentStats>({
+    criticalPerfect: 0,
+    perfect: 0,
+    great: 0,
+    good: 0,
+    miss: 0,
+  });
+  const [totalCorrectChars, setTotalCorrectChars] = useState(0);
+  const [totalCharsInGame, setTotalCharsInGame] = useState(0);
+  const [currentLineCorrectChars, setCurrentLineCorrectChars] = useState(0);
+  const [processedLines, setProcessedLines] = useState<Set<number>>(new Set());
+  const [totalProcessedChars, setTotalProcessedChars] = useState(0);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   const timeToSeconds = (timeStr: string): number => {
@@ -48,9 +81,13 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
     if (currentTime >= countdownStartTime && currentTime < firstLyricTime) {
       const timeUntilFirstLyric = firstLyricTime - currentTime;
       const countdownValue = Math.ceil(timeUntilFirstLyric);
-      
+
       if (!showCountdown) setShowCountdown(true);
-      if (countdownValue !== countdown && countdownValue >= 1 && countdownValue <= 3) {
+      if (
+        countdownValue !== countdown &&
+        countdownValue >= 1 &&
+        countdownValue <= 3
+      ) {
         setCountdown(countdownValue);
       }
       setInputDisabled(true);
@@ -63,18 +100,51 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
       setInputDisabled(false);
     }
 
-    // Find current lyric
+    // Find current lyric and handle missed lyrics
     const currentLyric = lyrics.findIndex((lyric, index) => {
       const lyricTime = timeToSeconds(lyric.time);
-      const nextLyricTime = index < lyrics.length - 1 ? timeToSeconds(lyrics[index + 1].time) : Infinity;
+      const nextLyricTime =
+        index < lyrics.length - 1
+          ? timeToSeconds(lyrics[index + 1].time)
+          : Infinity;
       return currentTime >= lyricTime && currentTime < nextLyricTime;
     });
+
+    // Check for missed/skipped lyrics
+    for (let i = 0; i < lyrics.length; i++) {
+      const lyricTime = timeToSeconds(lyrics[i].time);
+      const nextLyricTime =
+        i < lyrics.length - 1
+          ? timeToSeconds(lyrics[i + 1].time)
+          : lyricTime + 5;
+
+      // If current time has passed this lyric's window and it wasn't processed
+      if (
+        currentTime > nextLyricTime &&
+        !processedLines.has(i) &&
+        i !== currentLyric
+      ) {
+        // Mark entire line as missed (count as 1 miss, not per character)
+        const newStats = { ...judgmentStats };
+        newStats.miss++;
+        setJudgmentStats(newStats);
+        setProcessedLines((prev) => new Set(prev).add(i));
+      }
+    }
 
     if (currentLyric !== -1 && currentLyric !== currentLyricIndex) {
       setCurrentLyricIndex(currentLyric);
       setUserInput("");
     }
-  }, [currentTime, lyrics, currentLyricIndex, countdown, showCountdown]);
+  }, [
+    currentTime,
+    lyrics,
+    currentLyricIndex,
+    countdown,
+    showCountdown,
+    processedLines,
+    judgmentStats,
+  ]);
 
   // Focus hidden input and handle clicks
   useEffect(() => {
@@ -84,22 +154,68 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
       }
     };
 
-    document.addEventListener('click', handleClick);
-    
+    document.addEventListener("click", handleClick);
+
     // Auto focus when component mounts
     if (hiddenInputRef.current) {
       hiddenInputRef.current.focus();
     }
 
     return () => {
-      document.removeEventListener('click', handleClick);
+      document.removeEventListener("click", handleClick);
     };
   }, []);
 
   // Function to remove punctuation and convert to lowercase
   const cleanRomanjiText = (text: string): string => {
-    return text.replace(/[.,!?;:"'()[\]{}\-—]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    return text
+      .replace(/[.,!?;:"'()[\]{}\-—]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
   };
+
+  // Calculate grade based on achievement rate (maimai style)
+  const calculateGrade = (achievementRate: number): string => {
+    if (achievementRate >= 100.5) return "SSS+";
+    if (achievementRate >= 100.0) return "SSS";
+    if (achievementRate >= 99.5) return "SS+";
+    if (achievementRate >= 99.0) return "SS";
+    if (achievementRate >= 98.0) return "S+";
+    if (achievementRate >= 97.0) return "S";
+    if (achievementRate >= 94.0) return "AAA";
+    if (achievementRate >= 90.0) return "AA";
+    if (achievementRate >= 80.0) return "A";
+    if (achievementRate >= 75.0) return "BBB";
+    if (achievementRate >= 70.0) return "BB";
+    if (achievementRate >= 60.0) return "B";
+    if (achievementRate >= 50.0) return "C";
+    return "D";
+  };
+
+  // Judge typing accuracy (maimai style)
+  const judgeAccuracy = (
+    correctChars: number,
+    totalChars: number,
+    mistakes: number
+  ): string => {
+    const accuracy = correctChars / totalChars;
+    if (accuracy === 1 && mistakes === 0) return "criticalPerfect";
+    if (accuracy >= 0.95) return "perfect";
+    if (accuracy >= 0.85) return "great";
+    if (accuracy >= 0.7) return "good";
+    return "miss";
+  };
+
+  // Calculate total characters in the entire game (one-time calculation)
+  useEffect(() => {
+    if (lyrics_romaji.length > 0 && totalCharsInGame === 0) {
+      const total = lyrics_romaji.reduce((sum, lyric) => {
+        return sum + cleanRomanjiText(lyric.text).length;
+      }, 0);
+      setTotalCharsInGame(total);
+    }
+  }, [lyrics_romaji, totalCharsInGame]);
 
   // Initialize texts when lyric changes
   useEffect(() => {
@@ -107,76 +223,157 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
       const currentText = lyrics[currentLyricIndex].text;
       const currentRomanji = lyrics_romaji[currentLyricIndex].text;
       const cleanedRomanji = cleanRomanjiText(currentRomanji);
-      
+
       setJapaneseText(currentText);
       setRomanjiText(cleanedRomanji);
       setRomanjiStates(new Array(cleanedRomanji.length).fill("pending"));
       setUserInput("");
+      setCurrentLineCorrectChars(0); // Reset current line progress
     }
   }, [currentLyricIndex, lyrics, lyrics_romaji]);
 
   // Handle typing input
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    // Don't allow input if disabled
-    if (inputDisabled) {
-      e.preventDefault();
-      return;
-    }
-
-    const newInput = e.target.value;
-    setUserInput(newInput);
-
-    // Update romanji character states based on input
-    const updatedStates = [...romanjiStates];
-    
-    for (let i = 0; i < romanjiText.length; i++) {
-      if (i < newInput.length) {
-        if (newInput[i].toLowerCase() === romanjiText[i].toLowerCase()) {
-          updatedStates[i] = "correct";
-        } else {
-          updatedStates[i] = "incorrect";
-        }
-      } else {
-        updatedStates[i] = "pending";
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Don't allow input if disabled
+      if (inputDisabled) {
+        e.preventDefault();
+        return;
       }
-    }
 
-    setRomanjiStates(updatedStates);
+      const newInput = e.target.value;
+      setUserInput(newInput);
 
-    // Update score
-    const correctChars = updatedStates.filter(s => s === "correct").length;
-    const totalChars = romanjiText.length;
-    const newScore = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 0;
-    setScore(newScore);
-    onScoreUpdate?.(newScore);
+      // Update romanji character states based on input
+      const updatedStates = [...romanjiStates];
 
-    // Auto advance to next lyric if completed correctly
-    if (correctChars === totalChars && totalChars > 0) {
-      setTimeout(() => {
-        if (currentLyricIndex < lyrics.length - 1) {
-          setCurrentLyricIndex(prev => prev + 1);
-          setUserInput("");
+      for (let i = 0; i < romanjiText.length; i++) {
+        if (i < newInput.length) {
+          if (newInput[i].toLowerCase() === romanjiText[i].toLowerCase()) {
+            updatedStates[i] = "correct";
+          } else {
+            updatedStates[i] = "incorrect";
+          }
+        } else {
+          updatedStates[i] = "pending";
         }
-      }, 500);
-    }
-  }, [romanjiStates, romanjiText, currentLyricIndex, lyrics.length, onScoreUpdate, inputDisabled]);
+      }
 
-  // Show countdown if active
+      setRomanjiStates(updatedStates);
+
+      // Calculate correct chars for current line
+      const correctChars = updatedStates.filter((s) => s === "correct").length;
+      const totalChars = romanjiText.length;
+
+      // Only update if current line correct chars increased (never decrease)
+      if (correctChars > currentLineCorrectChars) {
+        const increase = correctChars - currentLineCorrectChars;
+        setTotalCorrectChars((prev) => prev + increase);
+        setCurrentLineCorrectChars(correctChars);
+      }
+
+      // Calculate overall game progress percentage from the persistent total
+      const gameProgressPercentage =
+        totalCharsInGame > 0 ? (totalCorrectChars / totalCharsInGame) * 100 : 0;
+
+      const grade = calculateGrade(gameProgressPercentage);
+
+      setScore(gameProgressPercentage);
+      onScoreUpdate?.(gameProgressPercentage, grade, judgmentStats);
+
+      // Auto advance to next lyric if completed correctly
+      if (correctChars === totalChars && totalChars > 0) {
+        // Judge this line based on overall accuracy
+        const mistakes = updatedStates.filter((s) => s === "incorrect").length;
+        const accuracy = correctChars / totalChars;
+
+        let judgment = "";
+        if (accuracy === 1 && mistakes === 0) {
+          judgment = "criticalPerfect";
+        } else if (accuracy >= 0.95) {
+          judgment = "perfect";
+        } else if (accuracy >= 0.85) {
+          judgment = "great";
+        } else if (accuracy >= 0.7) {
+          judgment = "good";
+        } else {
+          judgment = "miss";
+        }
+
+        // Update judgment stats (count this line as 1 judgment)
+        const newStats = { ...judgmentStats };
+        newStats[judgment as keyof JudgmentStats]++;
+        setJudgmentStats(newStats);
+
+        // Mark this line as processed
+        setProcessedLines((prev) => new Set(prev).add(currentLyricIndex));
+
+        setTimeout(() => {
+          if (currentLyricIndex < lyrics.length - 1) {
+            setCurrentLyricIndex((prev) => prev + 1);
+            setUserInput("");
+          } else {
+            // Game completed - all lyrics finished
+            onGameComplete?.();
+          }
+        }, 500);
+      }
+    },
+    [
+      romanjiStates,
+      romanjiText,
+      currentLyricIndex,
+      lyrics.length,
+      onScoreUpdate,
+      inputDisabled,
+      judgmentStats,
+      totalCorrectChars,
+      totalCharsInGame,
+      currentLineCorrectChars,
+      processedLines,
+      totalProcessedChars,
+      lyrics_romaji,
+      onGameComplete,
+    ]
+  );
+
+  // Show countdown with upcoming lyrics if active
   if (showCountdown) {
+    const upcomingJapanese = lyrics[0]?.text || "";
+    const upcomingRomanji = lyrics_romaji[0]?.text || "";
+    const cleanedUpcomingRomanji = cleanRomanjiText(upcomingRomanji);
+
     return (
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-center">
+        <div className="text-center max-w-4xl mx-auto px-8">
+          {/* Show upcoming lyrics */}
+          <div className="text-4xl mb-6 font-bold leading-relaxed text-gray-500 drop-shadow-2xl">
+            <span style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
+              {upcomingJapanese}
+            </span>
+          </div>
+
+          <div className="text-2xl mb-8 text-center font-mono leading-relaxed text-gray-500">
+            <span style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
+              {cleanedUpcomingRomanji}
+            </span>
+          </div>
+
+          {/* Countdown dots */}
           <div className="flex items-center justify-center space-x-4">
             {[1, 2, 3].map((dotNumber) => (
               <div
                 key={dotNumber}
                 className={`w-6 h-6 rounded-full transition-all duration-500 ${
-                  countdown >= dotNumber 
-                    ? "bg-white opacity-100 scale-100" 
+                  countdown >= dotNumber
+                    ? "bg-white opacity-100 scale-100"
                     : "bg-gray-600 opacity-30 scale-75"
                 }`}
                 style={{
-                  boxShadow: countdown >= dotNumber ? "0 0 20px rgba(255,255,255,0.5)" : "none"
+                  boxShadow:
+                    countdown >= dotNumber
+                      ? "0 0 20px rgba(255,255,255,0.5)"
+                      : "none",
                 }}
               />
             ))}
@@ -202,7 +399,7 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
 
         {/* Romanji display with character-by-character highlighting */}
         <div className="text-2xl text-center font-mono leading-relaxed">
-          {romanjiText.split('').map((char, index) => (
+          {romanjiText.split("").map((char, index) => (
             <span
               key={index}
               className={`${
@@ -213,7 +410,7 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
                   : "text-gray-400"
               } transition-colors duration-200`}
               style={{
-                textShadow: "2px 2px 4px rgba(0,0,0,0.8)"
+                textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
               }}
             >
               {char}
@@ -231,7 +428,7 @@ const TypingInterface = ({ lyrics, lyrics_romaji, currentTime, onScoreUpdate }: 
         disabled={inputDisabled}
         className="absolute -left-96 opacity-0 pointer-events-auto"
         autoFocus
-        style={{ position: 'fixed', left: '-9999px' }}
+        style={{ position: "fixed", left: "-9999px" }}
       />
     </div>
   );
