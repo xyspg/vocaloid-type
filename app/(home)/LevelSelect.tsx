@@ -30,6 +30,7 @@ const LevelSelect = ({ song, onClose }: { song: Song, onClose: () => void }) => 
       color: "text-purple-500",
     },
   ];
+  const hasVariants = song.variants?.video?.length > 0;
   return (
     <div className="p-4 md:w-screen flex flex-col gap-16 justify-center items-center "
     onClick={(e) => {
@@ -41,7 +42,7 @@ const LevelSelect = ({ song, onClose }: { song: Song, onClose: () => void }) => 
     >
       <div className="w-5/6 md:w-1/3">
       <ContextMenu>
-      <ContextMenuTrigger><SongCover key={song.slug} song={song} /></ContextMenuTrigger>
+      <ContextMenuTrigger disabled={!hasVariants}><SongCover key={song.slug} song={song} /></ContextMenuTrigger>
       <ContextMenuContent>
        {song.variants?.video.map((variant: { name: string, url: string }) => (
         <ContextMenuItem key={variant.name}>
