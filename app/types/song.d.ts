@@ -12,4 +12,10 @@ export interface Song {
     video: string;
     lyrics: LyricLine[];
     lyrics_romaji: LyricLine[];
+    variants?: {
+        video: {
+            name: string;
+            url: string;
+        }[];
+    }
 }

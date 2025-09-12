@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
  images: {
-  remotePatterns: [new URL('https://object.xyspg.moe/vocaloid/images/**')]
+  remotePatterns: [new URL(`${process.env.NEXT_PUBLIC_STORAGE_URL}/vocaloid/images/**`)]
  }
 }
 

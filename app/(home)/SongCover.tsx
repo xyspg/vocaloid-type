@@ -20,7 +20,7 @@ const SongCover = ({
         transition={{ type: "spring", stiffness: 150, damping: 20 }}
       >
         <Image
-          src={`https://object.xyspg.moe/vocaloid/images/${song.cover}`}
+          src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/vocaloid/images/${song.cover}`}
                     alt={song.title}
           fill
           className="object-cover"

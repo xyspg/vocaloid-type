@@ -150,6 +150,11 @@ const Player = ({ song }: { song: Song }) => {
     );
   }
 
+  let url = `${process.env.NEXT_PUBLIC_STORAGE_URL}/vocaloid/videos/${song.video}`;
+  if (searchParams.get("variant")) {
+    url = `${process.env.NEXT_PUBLIC_STORAGE_URL}/vocaloid/videos/${song.variants?.video.find((variant: { name: string, url: string }) => variant.name === searchParams.get("variant"))?.url}`;
+  }
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* Full-screen video background */}
@@ -160,7 +165,7 @@ const Player = ({ song }: { song: Song }) => {
         playsInline
         controls={false}
       >
-        <source src={`https://object.xyspg.moe/vocaloid/videos/${song.video}`} type="video/mp4" />
+        <source src={url} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
 

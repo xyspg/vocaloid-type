@@ -4,6 +4,12 @@ import { Song } from "../types";
 import Link from "next/link";
 import clsx from "clsx";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 
 const LevelSelect = ({ song, onClose }: { song: Song, onClose: () => void }) => {
   const levels = [
@@ -34,7 +40,16 @@ const LevelSelect = ({ song, onClose }: { song: Song, onClose: () => void }) => 
       }}
     >
       <div className="w-5/6 md:w-1/3">
-        <SongCover key={song.slug} song={song} />
+      <ContextMenu>
+      <ContextMenuTrigger><SongCover key={song.slug} song={song} /></ContextMenuTrigger>
+      <ContextMenuContent>
+       {song.variants?.video.map((variant: { name: string, url: string }) => (
+        <ContextMenuItem key={variant.name}>
+          <Link href={`/play/${song.slug}?variant=${variant.name}`}>{variant.name}</Link>
+        </ContextMenuItem>
+       ))}
+      </ContextMenuContent>
+        </ContextMenu>
       </div>
       <Tabs defaultValue="account" className="w-[400px] flex items-center">
         <p className="text-lg font-bold">Speed</p>

@@ -59,7 +59,7 @@ const ResultScreen = ({
           {/* Song Info */}
           <div className="absolute top-20 flex items-center gap-4">
             <Image
-              src={`https://object.xyspg.moe/vocaloid/images/${song.cover}`} 
+              src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/vocaloid/images/${song.cover}`} 
               alt={song.title}
               className="w-24 h-24 rounded-lg shadow-lg"
               width={96}
