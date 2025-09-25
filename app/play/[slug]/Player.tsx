@@ -72,6 +72,7 @@ const Player = ({ song }: { song: Song }) => {
         video.play()
           .then(() => {
             setIsMuted(false);
+            setAutoplayFailed(false);
             // Double-check playback rate after play starts
             if (video.playbackRate !== targetSpeed) {
               video.playbackRate = targetSpeed;
@@ -187,7 +188,6 @@ const Player = ({ song }: { song: Song }) => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Full-screen video background */}
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-cover"
@@ -204,7 +204,7 @@ const Player = ({ song }: { song: Song }) => {
 
       {/* Content overlay */}
       <div className="relative z-10 min-h-screen flex items-center justify-center">
-        {(isMuted || autoplayFailed) && (
+        {(isMuted && autoplayFailed) && (
           <button
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
             onClick={handleUnmute}

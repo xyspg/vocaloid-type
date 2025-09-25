@@ -239,6 +239,12 @@ const TypingInterface = ({
         return;
       }
 
+      // Don't allow input if current line has already been completed
+      if (processedLines.has(currentLyricIndex)) {
+        e.preventDefault();
+        return;
+      }
+
       const newInput = e.target.value;
       setUserInput(newInput);
 
@@ -422,23 +428,28 @@ const TypingInterface = ({
 
         {/* Romanji display with character-by-character highlighting */}
         <div className="text-2xl text-center font-mono leading-relaxed">
-          {romanjiText.split("").map((char, index) => (
-            <span
-              key={index}
-              className={`${
-                romanjiStates[index] === "correct"
-                  ? "text-white"
-                  : romanjiStates[index] === "incorrect"
-                  ? "text-red-400"
-                  : "text-gray-400"
-              } transition-colors duration-200`}
-              style={{
-                textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
-              }}
-            >
-              {char}
-            </span>
-          ))}
+          {romanjiText.split("").map((char, index) => {
+            // If current line is completed, show all characters as white
+            const isLineCompleted = processedLines.has(currentLyricIndex);
+
+            return (
+              <span
+                key={index}
+                className={`${
+                  isLineCompleted || romanjiStates[index] === "correct"
+                    ? "text-white"
+                    : romanjiStates[index] === "incorrect"
+                    ? "text-red-400"
+                    : "text-gray-400"
+                } transition-colors duration-200`}
+                style={{
+                  textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+                }}
+              >
+                {char}
+              </span>
+            );
+          })}
         </div>
       </div>
 
