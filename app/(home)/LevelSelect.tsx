@@ -50,7 +50,7 @@ const LevelSelect = ({
     >
       <div className="w-5/6 md:w-1/3">
         <ContextMenu>
-          <ContextMenuTrigger disabled={!hasVariants}>
+          <ContextMenuTrigger disabled={!!!!!hasVariants}>
             <SongCover key={song.slug} song={song} />
           </ContextMenuTrigger>
           <ContextMenuContent>
